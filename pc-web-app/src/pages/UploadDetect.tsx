@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { uploadImage } from '../api';
+import { uploadImage, API_URL } from '../api';
 import { UploadCloud, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function UploadDetect() {
