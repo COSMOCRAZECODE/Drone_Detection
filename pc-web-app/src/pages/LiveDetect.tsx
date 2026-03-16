@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { getWebSocketUrl } from '../api';
 import { Video, AlertTriangle, ShieldCheck, CameraOff } from 'lucide-react';
 

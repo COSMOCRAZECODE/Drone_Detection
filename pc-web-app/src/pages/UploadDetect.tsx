@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { uploadImage } from '../api';
 import { UploadCloud, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -8,7 +8,6 @@ export default function UploadDetect() {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const imageRef = useRef<HTMLImageElement>(null);
-    const [imgDim, setImgDim] = useState({ w: 0, h: 0 });
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -19,14 +18,6 @@ export default function UploadDetect() {
         }
     };
 
-    const onImageLoad = () => {
-        if (imageRef.current) {
-            setImgDim({
-                w: imageRef.current.naturalWidth,
-                h: imageRef.current.naturalHeight
-            });
-        }
-    };
 
     const handleUpload = async () => {
         if (!file) return;
@@ -87,7 +78,7 @@ export default function UploadDetect() {
                             <div style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className="relative" style={{ display: 'inline-block', maxHeight: '100%', maxWidth: '100%' }}>
                                     <img
-                                        src={result?.filename ? `http://localhost:8000/uploads/${result.filename}?t=${Date.now()}` : preview}
+                                        src={result?.filename ? `${import.meta.env.VITE_API_URL || API_URL}/uploads/${result.filename}?t=${Date.now()}` : preview}
                                         alt="Upload preview"
                                         style={{ maxHeight: '100%', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
                                     />

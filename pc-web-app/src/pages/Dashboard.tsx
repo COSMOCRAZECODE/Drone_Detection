@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getHistory } from '../api';
 import { AlertCircle, CheckCircle2, Clock, Image as ImageIcon } from 'lucide-react';
 
