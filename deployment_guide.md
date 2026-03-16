@@ -77,7 +77,7 @@ Since your backend is now in the cloud, running the website locally can cause "C
     *   Import your repository.
 3.  **Project Settings**:
     *   **Root Directory**: Click "Edit" and select `pc-web-app`.
-    *   **Framework Preset**: Vite (should be auto-detected).
+    *   **Framework/Application Preset**: Ensure **Vite** is selected (Vercel might call this "Application Preset" or "Framework Preset").
 4.  **Environment Variables** (Optional but good):
     *   You can set your API URL here or just keep it in your code as you already did.
 5.  **Deploy**: Click **"Deploy"**. 
