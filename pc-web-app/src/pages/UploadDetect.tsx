@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { uploadImage, API_URL } from '../api';
 import { UploadCloud, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -7,9 +7,8 @@ export default function UploadDetect() {
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
-    const imageRef = useRef<HTMLImageElement>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: any) => {
         if (e.target.files && e.target.files[0]) {
             const selected = e.target.files[0];
             setFile(selected);
