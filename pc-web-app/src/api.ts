@@ -24,6 +24,11 @@ export const deleteHistory = async () => {
   return response.data;
 };
 
+export const deleteRecord = async (recordId: string) => {
+  const response = await api.delete(`/detect/record/${recordId}`);
+  return response.data;
+};
+
 export const deleteSession = async (sessionId: string) => {
   const response = await api.delete(`/detect/session/${sessionId}`);
   return response.data;

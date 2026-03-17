@@ -156,40 +156,40 @@ export default function LiveDetect() {
       <div className="card">
         {error && <div className="badge badge-danger mb-4 w-full text-center">{error}</div>}
 
-        <div className="image-preview-container" style={{ height: '500px' }}>
+        <div className="image-preview-container" style={{ height: '500px', border: 'none', background: '#000' }}>
           <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'contain' }} muted playsInline />
           <canvas ref={overlayRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 10, pointerEvents: 'none' }} />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {!isStreaming && (
             <div className="flex flex-col items-center gap-4 text-muted">
-              <CameraOff size={64} opacity={0.3} />
-              <p className="font-bold uppercase tracking-widest">Feed Offline</p>
+              <CameraOff size={64} style={{ opacity: 0.1 }} />
+              <p className="font-bold uppercase tracking-widest text-xs opacity-50">Feed Offline</p>
             </div>
           )}
         </div>
 
-        <div className="mt-6 flex flex-wrap justify-between items-center gap-4">
+        <div className="mt-8 flex flex-wrap justify-between items-center gap-6 pb-2">
           {!isStreaming ? (
-            <button onClick={startCamera} className="btn btn-primary" style={{ padding: '0.75rem 2rem' }}>
+            <button onClick={startCamera} className="btn btn-primary" style={{ padding: '0.8rem 2.5rem', fontSize: '1.1rem', borderRadius: '0.75rem' }}>
               <Video size={20} /> START CAMERA
             </button>
           ) : (
-            <button onClick={stopCamera} className="btn badge-danger" style={{ padding: '0.75rem 2rem', color: 'white', background: 'var(--danger)' }}>
-              <CameraOff size={20} /> STOP
+            <button onClick={stopCamera} className="btn" style={{ padding: '0.8rem 2.5rem', fontSize: '1.1rem', borderRadius: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <CameraOff size={20} /> STOP FEED
             </button>
           )}
 
-          <div style={{ minWidth: '240px' }}>
+          <div style={{ minWidth: '300px' }}>
             {status.drone_detected ? (
-              <div className="badge badge-danger text-lg py-3 px-6 w-full flex items-center justify-center gap-3">
+              <div className="badge badge-danger text-lg py-4 px-8 w-full flex items-center justify-center gap-4" style={{ borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                 <AlertTriangle size={24} />
-                DRONE DETECTED ({(status.confidence * 100).toFixed(0)}%)
+                <span className="font-black uppercase tracking-tight">Drone Detected ({(status.confidence * 100).toFixed(0)}%)</span>
               </div>
             ) : (
-              <div className="badge badge-success text-lg py-3 px-6 w-full flex items-center justify-center gap-3">
+              <div className="badge badge-success text-lg py-4 px-8 w-full flex items-center justify-center gap-4" style={{ borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                 <ShieldCheck size={24} />
-                AIRSPACE SECURE
+                <span className="font-black uppercase tracking-tight">Airspace Secure</span>
               </div>
             )}
           </div>
