@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { getWebSocketUrl } from '../api';
-import { Video, AlertTriangle, ShieldCheck, CameraOff, Play } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, CameraOff, Play } from 'lucide-react';
 
 export default function LiveDetect() {
   const videoRef = useRef<HTMLVideoElement>(null);
