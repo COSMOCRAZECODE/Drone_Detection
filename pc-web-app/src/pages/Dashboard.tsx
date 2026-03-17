@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getHistory, deleteHistory, deleteSession, deleteRecord } from '../api';
-import { AlertCircle, Clock, Video, Trash2, FolderOpen, Layers, Image as ImageIcon, ChevronLeft, Calendar, Download } from 'lucide-react';
+import { AlertCircle, Video, Trash2, FolderOpen, Layers, Image as ImageIcon, ChevronLeft, Calendar, Download } from 'lucide-react';
 
 interface HistoryItem {
   _id: string;
@@ -37,6 +37,7 @@ export default function Dashboard() {
   const handleDeleteAll = async () => {
     if (window.confirm("CRITICAL: Wipe entire detection history? This cannot be undone.")) {
       await deleteHistory();
+      setSelectedSession(null);
       fetchHistory();
     }
   };
@@ -59,7 +60,6 @@ export default function Dashboard() {
   };
 
   const formatDisplayTime = (isoString: string) => {
-    // Ensure the timestamp is treated as UTC if it lacks a timezone offset
     let dateStr = isoString;
     if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
       dateStr += 'Z';
@@ -92,10 +92,17 @@ export default function Dashboard() {
     sessionsMap[sid].push(item);
   });
 
+  // Safety reset for blank screen avoidance
+  useEffect(() => {
+    if (activeTab === 'live' && selectedSession && !sessionsMap[selectedSession]) {
+      setSelectedSession(null);
+    }
+  }, [history, selectedSession, activeTab, sessionsMap]);
+
   if (loading) {
     return (
       <div className="main-content flex justify-center items-center py-20">
-        <Clock className="spinner text-primary" size={48} style={{ color: 'var(--primary-color)' }} />
+        <div className="spinner" style={{ color: 'var(--primary-color)', width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
       </div>
     );
   }
@@ -141,9 +148,6 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Safety check to prevent blank screen if session was deleted */}
-      {selectedSession && !sessionsMap[selectedSession] && setActiveTab('live') && setSelectedSession(null)}
-
       {activeTab === 'uploads' && (
         <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '2.5rem' }}>
           {uploadHistory.length === 0 ? (
@@ -186,8 +190,7 @@ export default function Dashboard() {
                 )}
               </div>
               <div className="mt-3 flex justify-between items-center px-1">
-                <div className="flex items-center gap-1.5 text-[11px] text-muted font-bold">
-                  <Clock size={11} className="text-primary-color opacity-70" />
+                <div className="text-[11px] text-muted font-bold">
                   {formatDisplayTime(item.timestamp)}
                 </div>
                 <div className="flex items-center gap-1">
@@ -275,7 +278,7 @@ export default function Dashboard() {
                 </button>
               </div>
 
-                <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
+              <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
                 {sessionsMap[selectedSession!].map(alert => (
                   <div key={alert._id} className="card group p-2 hover:border-primary-color/40 transition-all" style={{ background: 'rgba(15, 23, 42, 0.4)', position: 'relative', borderRadius: '0.75rem' }}>
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
