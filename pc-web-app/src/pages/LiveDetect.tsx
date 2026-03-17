@@ -194,8 +194,8 @@ export default function LiveDetect() {
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {!isStreaming && (
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-              <p className="font-bold uppercase tracking-widest text-sm opacity-50 text-muted">FFED OFFLINE</p>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '100%' }}>
+              <p className="font-bold uppercase tracking-widest text-sm opacity-50 text-muted">FEED OFFLINE</p>
             </div>
           )}
         </div>

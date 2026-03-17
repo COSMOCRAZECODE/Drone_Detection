@@ -168,14 +168,14 @@ export default function Dashboard() {
                 </span>
                 <span className="text-xs text-muted font-mono">{new Date(item.timestamp).toLocaleDateString()}</span>
               </div>
-              <div className="history-img-container" style={{ background: '#005', height: '190px', borderRadius: '1rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="history-img-container" style={{ background: 'rgba(0,0,0,0.5)', height: '190px', borderRadius: '0.8rem', overflow: 'hidden', border: '1px solid var(--border-color)', marginBottom: '0' }}>
                 {item.image_data ? (
-                  <img src={`data:image/jpeg;base64,${item.image_data}`} className="history-img" style={{ maxHeight: '100%', filter: 'contrast(1.1)' }} />
+                  <img src={`data:image/jpeg;base64,${item.image_data}`} className="history-img" style={{ maxHeight: '100%', width: 'auto' }} />
                 ) : (
                   <ImageIcon size={32} className="text-muted opacity-20" />
                 )}
               </div>
-              <div className="mt-5 flex justify-between items-center">
+              <div className="mt-4 flex justify-between items-center px-1">
                 <div className="flex items-center gap-2 text-xs text-muted font-bold">
                   <Clock size={12} style={{ color: 'var(--primary-color)' }} />
                   {formatDisplayTime(item.timestamp)}
@@ -237,16 +237,16 @@ export default function Dashboard() {
                 <button 
                   onClick={() => setSelectedSession(null)}
                   className="btn-icon btn-icon-primary"
-                  style={{ width: '48px', height: '48px', borderRadius: '50%' }}
+                  style={{ width: '40px', height: '40px', borderRadius: '50%' }}
                 >
-                  <ChevronLeft size={28} />
+                  <ChevronLeft size={24} />
                 </button>
                 <div>
-                  <h2 className="text-2xl font-black flex items-center gap-4">
-                    <span style={{ color: 'var(--primary-color)' }}>{selectedSession}</span>
+                  <h2 className="text-2xl font-bold flex items-center gap-4">
+                    <span>{selectedSession}</span>
                   </h2>
-                  <p className="text-muted text-[10px] uppercase font-black tracking-[0.2em] mt-2 opacity-60">
-                    DETAILED LOGS • {sessionsMap[selectedSession!].length} HIGH-CONFIDENCE DETECTIONS
+                  <p className="text-muted text-[10px] uppercase font-black tracking-widest mt-1 opacity-60">
+                    {sessionsMap[selectedSession!].length} EVENTS DETECTED
                   </p>
                 </div>
                 <button 
@@ -255,21 +255,21 @@ export default function Dashboard() {
                     style={{ 
                         color: 'var(--danger)', 
                         borderColor: 'rgba(239, 68, 68, 0.3)', 
-                        background: 'rgba(239, 68, 68, 0.1)',
+                        background: 'rgba(239, 68, 68, 0.05)',
                         fontSize: '0.75rem',
-                        fontWeight: '900',
-                        padding: '0.6rem 1.2rem'
+                        fontWeight: 'bold',
+                        padding: '0.5rem 1rem'
                     }}
                 >
-                    PURGE SESSION
+                    DELETE ALL
                 </button>
               </div>
 
-              <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '2rem' }}>
+              <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.5rem' }}>
                 {sessionsMap[selectedSession!].map(alert => (
-                  <div key={alert._id} className="card group p-4 hover:border-primary-color/40 transition-all" style={{ background: 'rgba(0,0,0,0.3)', position: 'relative', borderRadius: '1.25rem' }}>
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all scale-90">
-                      <div className="btn-icon-group">
+                  <div key={alert._id} className="card group p-3 hover:border-primary-color/40 transition-all" style={{ background: 'rgba(30, 41, 59, 0.5)', position: 'relative', borderRadius: '1rem' }}>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10">
+                      <div className="btn-icon-group scale-90">
                         <button 
                           onClick={(e) => alert.image_data && handleDownload(e, alert.image_data, 'Live')}
                           className="btn-icon btn-icon-primary"
@@ -284,19 +284,19 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
-                    <div className="history-img-container" style={{ height: '130px', marginBottom: '1rem', border: 'none', background: '#000', borderRadius: '0.75rem' }}>
+                    <div className="history-img-container" style={{ height: '140px', marginBottom: '0.75rem', border: 'none', background: '#000', borderRadius: '0.75rem' }}>
                       {alert.image_data ? (
                         <img src={`data:image/jpeg;base64,${alert.image_data}`} className="history-img" />
                       ) : (
-                        <div className="flex flex-col items-center gap-1 opacity-10">
-                             <AlertCircle size={32} className="text-danger" />
-                             <span className="text-[8px] font-black text-white">METADATA</span>
+                        <div className="flex flex-col items-center gap-1 opacity-10 text-center">
+                             <AlertCircle size={24} className="text-danger" />
+                             <span className="text-[8px] font-black text-white">NO IMAGE<br/>METADATA</span>
                         </div>
                       )}
                     </div>
                     <div className="flex justify-between items-center px-1">
-                        <span className="text-xs font-black text-primary-color">{(alert.confidence_score * 100).toFixed(0)}% CONF</span>
-                        <span className="text-[10px] text-muted font-mono font-bold">{formatDisplayTime(alert.timestamp)}</span>
+                        <span className="text-xs font-bold text-primary-color">{(alert.confidence_score * 100).toFixed(0)}% CONF</span>
+                        <span className="text-[10px] text-muted font-mono">{formatDisplayTime(alert.timestamp)}</span>
                     </div>
                   </div>
                 ))}
