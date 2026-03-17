@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getHistory, deleteHistory, deleteSession, API_BASE_URL } from '../api';
-import { AlertCircle, CheckCircle2, Clock, Image as ImageIcon, Video, Trash2, FolderOpen, Layers } from 'lucide-react';
+import { getHistory, deleteHistory, deleteSession } from '../api';
+import { AlertCircle, Clock, Video, Trash2, FolderOpen, Layers } from 'lucide-react';
 
 interface HistoryItem {
     _id: string;
