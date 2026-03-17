@@ -59,8 +59,13 @@ export default function Dashboard() {
   };
 
   const formatDisplayTime = (isoString: string) => {
-    // Force local timezone display
-    return new Date(isoString).toLocaleTimeString([], { 
+    // Ensure the timestamp is treated as UTC if it lacks a timezone offset
+    let dateStr = isoString;
+    if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+      dateStr += 'Z';
+    }
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: true 
@@ -120,19 +125,24 @@ export default function Dashboard() {
       </div>
 
       <div className="history-tabs">
-        <button
+        <button 
           onClick={() => { setActiveTab('uploads'); setSelectedSession(null); }}
           className={`tab-btn ${activeTab === 'uploads' ? 'active' : ''}`}
+          style={{ paddingBottom: '1.25rem' }}
         >
-          <Layers size={18} /> UPLOADS ({uploadHistory.length})
+          <Layers size={20} /> UPLOADS ({uploadHistory.length})
         </button>
-        <button
+        <button 
           onClick={() => { setActiveTab('live'); setSelectedSession(null); }}
           className={`tab-btn ${activeTab === 'live' ? 'active' : ''}`}
+          style={{ paddingBottom: '1.25rem' }}
         >
-          <Video size={18} /> LIVE SURVEILLANCE ({Object.keys(sessionsMap).length})
+          <Video size={20} /> LIVE SURVEILLANCE ({Object.keys(sessionsMap).length})
         </button>
       </div>
+
+      {/* Safety check to prevent blank screen if session was deleted */}
+      {selectedSession && !sessionsMap[selectedSession] && setActiveTab('live') && setSelectedSession(null)}
 
       {activeTab === 'uploads' && (
         <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '2.5rem' }}>
@@ -162,27 +172,27 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              <div className="flex justify-between items-center mb-5 pr-20">
-                <span className={`badge ${item.drone_detected ? 'badge-danger' : 'badge-success'}`}>
-                  {item.drone_detected ? 'DRONE IDENTIFIED' : 'CLEAR AREA'}
+              <div className="flex justify-between items-center mb-3 pr-16 px-1">
+                <span className={`badge ${item.drone_detected ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                  {item.drone_detected ? 'DRONE IDENTIFIED' : 'CLEAR'}
                 </span>
-                <span className="text-xs text-muted font-mono">{new Date(item.timestamp).toLocaleDateString()}</span>
+                <span className="text-[10px] text-muted font-bold opacity-40">{new Date(item.timestamp).toLocaleDateString()}</span>
               </div>
-              <div className="history-img-container" style={{ background: 'rgba(0,0,0,0.5)', height: '190px', borderRadius: '0.8rem', overflow: 'hidden', border: '1px solid var(--border-color)', marginBottom: '0' }}>
+              <div className="history-img-container" style={{ background: '#000', height: '180px', borderRadius: '0.6rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '0' }}>
                 {item.image_data ? (
-                  <img src={`data:image/jpeg;base64,${item.image_data}`} className="history-img" style={{ maxHeight: '100%', width: 'auto' }} />
+                  <img src={`data:image/jpeg;base64,${item.image_data}`} className="history-img" style={{ maxHeight: '100%', width: 'auto', opacity: 0.9 }} />
                 ) : (
                   <ImageIcon size={32} className="text-muted opacity-20" />
                 )}
               </div>
-              <div className="mt-4 flex justify-between items-center px-1">
-                <div className="flex items-center gap-2 text-xs text-muted font-bold">
-                  <Clock size={12} style={{ color: 'var(--primary-color)' }} />
+              <div className="mt-3 flex justify-between items-center px-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted font-bold">
+                  <Clock size={11} className="text-primary-color opacity-70" />
                   {formatDisplayTime(item.timestamp)}
                 </div>
                 <div className="flex items-center gap-1">
-                    <span className="text-[10px] font-black text-muted uppercase tracking-tighter">Confidence:</span>
-                    <span style={{ color: 'var(--primary-color)', fontWeight: '900', fontSize: '1rem' }}>{(item.confidence_score * 100).toFixed(0)}%</span>
+                    <span className="text-[9px] font-black text-muted uppercase opacity-50">Score:</span>
+                    <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{(item.confidence_score * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </div>
@@ -204,27 +214,27 @@ export default function Dashboard() {
                   key={sid} 
                   onClick={() => setSelectedSession(sid)}
                   className="card group cursor-pointer hover:border-primary-color/50 transition-all"
-                  style={{ padding: '2rem' }}
+                  style={{ padding: '1.5rem', borderRadius: '1.25rem' }}
                 >
-                  <div className="flex justify-between items-start mb-6">
-                    <div style={{ color: 'var(--primary-color)', padding: '1rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '1.25rem' }}>
-                      <FolderOpen size={32} />
+                  <div className="flex justify-between items-start mb-4">
+                    <div style={{ color: 'var(--primary-color)', padding: '0.8rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '1rem' }}>
+                      <FolderOpen size={24} />
                     </div>
                     <button 
                       onClick={(e) => handleDeleteSession(e, sid)}
-                      className="btn-icon btn-icon-danger opacity-0 group-hover:opacity-100"
+                      className="btn-icon btn-icon-danger opacity-0 group-hover:opacity-100 scale-90"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold group-hover:text-primary-color transition-colors truncate">{sid}</h3>
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3">
-                       <div className="flex items-center gap-1.5 text-[11px] text-muted uppercase font-black tracking-widest">
-                          <Layers size={12} className="text-primary-color" /> {sessionsMap[sid].length} Events
+                    <h3 className="text-lg font-bold group-hover:text-primary-color transition-colors truncate mb-1">{sid}</h3>
+                    <div className="flex items-center gap-4">
+                       <div className="flex items-center gap-1 text-[10px] text-muted font-bold tracking-tight">
+                          <Layers size={12} className="opacity-50" /> {sessionsMap[sid].length} Events
                        </div>
-                       <div className="flex items-center gap-1.5 text-[11px] text-muted uppercase font-black tracking-widest">
-                          <Calendar size={12} className="text-primary-color" /> {new Date(sessionsMap[sid][0].timestamp).toLocaleDateString()}
+                       <div className="flex items-center gap-1 text-[10px] text-muted font-bold tracking-tight">
+                          <Calendar size={12} className="opacity-50" /> {new Date(sessionsMap[sid][0].timestamp).toLocaleDateString()}
                        </div>
                     </div>
                   </div>
@@ -265,11 +275,11 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
                 {sessionsMap[selectedSession!].map(alert => (
-                  <div key={alert._id} className="card group p-3 hover:border-primary-color/40 transition-all" style={{ background: 'rgba(30, 41, 59, 0.5)', position: 'relative', borderRadius: '1rem' }}>
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10">
-                      <div className="btn-icon-group scale-90">
+                  <div key={alert._id} className="card group p-2 hover:border-primary-color/40 transition-all" style={{ background: 'rgba(15, 23, 42, 0.4)', position: 'relative', borderRadius: '0.75rem' }}>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
+                      <div className="btn-icon-group">
                         <button 
                           onClick={(e) => alert.image_data && handleDownload(e, alert.image_data, 'Live')}
                           className="btn-icon btn-icon-primary"
@@ -284,19 +294,19 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
-                    <div className="history-img-container" style={{ height: '140px', marginBottom: '0.75rem', border: 'none', background: '#000', borderRadius: '0.75rem' }}>
+                    <div className="history-img-container" style={{ height: '150px', marginBottom: '0.5rem', border: 'none', background: '#000', borderRadius: '0.6rem' }}>
                       {alert.image_data ? (
-                        <img src={`data:image/jpeg;base64,${alert.image_data}`} className="history-img" />
+                        <img src={`data:image/jpeg;base64,${alert.image_data}`} className="history-img" style={{ opacity: 0.9 }} />
                       ) : (
-                        <div className="flex flex-col items-center gap-1 opacity-10 text-center">
+                        <div className="flex flex-col items-center gap-1 opacity-20 text-center">
                              <AlertCircle size={24} className="text-danger" />
-                             <span className="text-[8px] font-black text-white">NO IMAGE<br/>METADATA</span>
+                             <span className="text-[8px] font-black">METADATA ONLY</span>
                         </div>
                       )}
                     </div>
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-xs font-bold text-primary-color">{(alert.confidence_score * 100).toFixed(0)}% CONF</span>
-                        <span className="text-[10px] text-muted font-mono">{formatDisplayTime(alert.timestamp)}</span>
+                    <div className="flex justify-between items-center px-2 pb-1">
+                        <span className="text-[11px] font-bold text-primary-color">{(alert.confidence_score * 100).toFixed(0)}% CONF</span>
+                        <span className="text-[10px] text-muted font-bold">{formatDisplayTime(alert.timestamp)}</span>
                     </div>
                   </div>
                 ))}
