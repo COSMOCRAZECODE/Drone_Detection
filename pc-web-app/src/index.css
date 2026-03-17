@@ -158,14 +158,84 @@ h4 {
   text-decoration: underline;
 }
 
-.btn-nav-logout {
-  background: transparent;
+.btn-nav-logout:hover {
+  color: var(--danger);
+}
+
+.btn-icon {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-icon-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.btn-icon-primary:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--primary-color);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Tab Active State fix */
+.tab-btn {
+  background: none;
   border: none;
   cursor: pointer;
-  font-family: inherit;
-  font-size: 1rem;
-  padding: 0;
-  margin-left: 1rem;
+  padding: 0.75rem 0.5rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
 /* Auth Pages */

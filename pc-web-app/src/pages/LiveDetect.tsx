@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { getWebSocketUrl } from '../api';
-import { Video, AlertTriangle, ShieldCheck, CameraOff } from 'lucide-react';
+import { Video, AlertTriangle, ShieldCheck, CameraOff, Play } from 'lucide-react';
 
 export default function LiveDetect() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -12,8 +12,18 @@ export default function LiveDetect() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [status, setStatus] = useState<any>({ drone_detected: false, confidence: 0 });
   const [error, setError] = useState('');
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [sessionName, setSessionName] = useState('');
+
+  const initCamera = () => {
+    setShowPrompt(true);
+    setSessionName(`Surveillance_${new Date().toLocaleTimeString([], { hour12: false }).replace(/:/g, '-')}`);
+  };
 
   const startCamera = async () => {
+    if (!sessionName.trim()) return;
+    setShowPrompt(false);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -23,10 +33,9 @@ export default function LiveDetect() {
         videoRef.current.play();
       }
 
-      const newSessionId = `SESS_${Date.now()}`;
       setIsStreaming(true);
       setError('');
-      connectWebSocket(newSessionId);
+      connectWebSocket(sessionName);
     } catch (err) {
       setError('Camera access denied. Please check your browser permissions.');
     }
@@ -93,7 +102,6 @@ export default function LiveDetect() {
 
     boxes.forEach(b => {
       let x1, y1, x2, y2, conf;
-
       if (b.x1 !== undefined && b.y1 !== undefined) {
         x1 = b.x1 * canvas.width;
         y1 = b.y1 * canvas.height;
@@ -127,7 +135,6 @@ export default function LiveDetect() {
         if (videoRef.current && videoRef.current.readyState >= 2 && wsRef.current?.readyState === WebSocket.OPEN) {
           const canvas = canvasRef.current!;
           const video = videoRef.current;
-
           if (video.videoWidth > 0) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -148,6 +155,31 @@ export default function LiveDetect() {
 
   return (
     <div className="main-content">
+      {showPrompt && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <h2 className="text-xl font-bold mb-4">Start Detection Session</h2>
+            <p className="text-muted text-sm mb-6">Give this session a name to organize your history.</p>
+            <div className="input-group">
+                <label className="input-label">Session Name</label>
+                <input 
+                    type="text" 
+                    className="input-field" 
+                    value={sessionName}
+                    onChange={(e) => setSessionName(e.target.value)}
+                    placeholder="e.g. Backyard Scan"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && startCamera()}
+                />
+            </div>
+            <div className="flex gap-4 mt-8">
+                <button onClick={() => setShowPrompt(false)} className="btn btn-secondary flex-1">CANCEL</button>
+                <button onClick={startCamera} className="btn btn-primary flex-1">START FEED</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Live Detection</h1>
         <p className="text-muted mt-2">Real-time accelerated drone defense feed.</p>
@@ -156,14 +188,14 @@ export default function LiveDetect() {
       <div className="card">
         {error && <div className="badge badge-danger mb-4 w-full text-center">{error}</div>}
 
-        <div className="image-preview-container" style={{ height: '500px', border: 'none', background: '#000' }}>
+        <div className="image-preview-container" style={{ height: '500px', border: 'none', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'contain' }} muted playsInline />
           <canvas ref={overlayRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 10, pointerEvents: 'none' }} />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {!isStreaming && (
-            <div className="flex flex-col items-center gap-4 text-muted">
-              <CameraOff size={64} style={{ opacity: 0.1 }} />
+            <div className="flex flex-col items-center justify-center gap-4 text-muted w-full h-full">
+              <CameraOff size={64} style={{ opacity: 0.15 }} />
               <p className="font-bold uppercase tracking-widest text-xs opacity-50">Feed Offline</p>
             </div>
           )}
@@ -171,8 +203,8 @@ export default function LiveDetect() {
 
         <div className="mt-8 flex flex-wrap justify-between items-center gap-6 pb-2">
           {!isStreaming ? (
-            <button onClick={startCamera} className="btn btn-primary" style={{ padding: '0.8rem 2.5rem', fontSize: '1.1rem', borderRadius: '0.75rem' }}>
-              <Video size={20} /> START CAMERA
+            <button onClick={initCamera} className="btn btn-primary" style={{ padding: '0.8rem 2.5rem', fontSize: '1.1rem', borderRadius: '0.75rem' }}>
+              <Play size={20} fill="currentColor" /> INITIALIZE SCAN
             </button>
           ) : (
             <button onClick={stopCamera} className="btn" style={{ padding: '0.8rem 2.5rem', fontSize: '1.1rem', borderRadius: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
