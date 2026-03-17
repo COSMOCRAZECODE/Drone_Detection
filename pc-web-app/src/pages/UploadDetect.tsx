@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { uploadImage, API_URL } from '../api';
+import { uploadImage, API_BASE_URL } from '../api';
 import { UploadCloud, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function UploadDetect() {
@@ -77,7 +77,7 @@ export default function UploadDetect() {
                             <div style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className="relative" style={{ display: 'inline-block', maxHeight: '100%', maxWidth: '100%' }}>
                                     <img
-                                        src={result?.filename ? `${import.meta.env.VITE_API_URL || API_URL}/uploads/${result.filename}?t=${Date.now()}` : preview}
+                                        src={result?.filename ? `${import.meta.env.VITE_API_URL || API_BASE_URL}/uploads/${result.filename}?t=${Date.now()}` : preview}
                                         alt="Upload preview"
                                         style={{ maxHeight: '100%', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
                                     />

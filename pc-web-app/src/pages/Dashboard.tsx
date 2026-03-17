@@ -11,8 +11,8 @@ interface HistoryItem {
     filename?: string;
 }
 
-import { API_URL } from '../api';
-const API_STATIC_URL = `${API_URL}/uploads`;
+import { API_BASE_URL } from '../api';
+const API_STATIC_URL = `${API_BASE_URL}/uploads`;
 
 export default function Dashboard() {
     const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -52,7 +52,7 @@ export default function Dashboard() {
                 <button
                     onClick={async () => {
                         if (window.confirm("Are you sure you want to clear your history?")) {
-                            await import('../api').then(m => m.clearHistory());
+                            await import('../api').then(m => m.deleteHistory());
                             setHistory([]);
                         }
                     }}
