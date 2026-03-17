@@ -54,7 +54,6 @@ export default function LiveDetect() {
             const data = JSON.parse(e.data);
             setStatus({ drone_detected: data.drone_detected, confidence: data.confidence });
             
-            // Handle boxes regardless of format (list of floats or list of objects)
             if (data.boxes) {
                 drawOverlay(data.boxes);
             } else {
@@ -79,29 +78,41 @@ export default function LiveDetect() {
         if (!ctx) return;
 
         const video = videoRef.current;
-        // Only trigger redraw if video has valid dimensions
         if (video.videoWidth === 0) return;
 
-        // Ensure canvas resolution matches video intrinsics
-        if (overlayRef.current.width !== video.videoWidth || overlayRef.current.height !== video.videoHeight) {
-            overlayRef.current.width = video.videoWidth;
-            overlayRef.current.height = video.videoHeight;
+        const canvas = overlayRef.current;
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
         }
 
-        ctx.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         boxes.forEach(b => {
-            // Support both [x1, y1, x2, y2] and {box: [x1,y1,x2,y2]}
-            const boxData = b.box || b;
-            if (Array.isArray(boxData) && boxData.length === 4) {
-                const [x1, y1, x2, y2] = boxData;
-                const conf = b.confidence || status.confidence || 0;
+            let x1, y1, x2, y2, conf;
 
+            // Handle normalized object format: {x1, y1, x2, y2, confidence}
+            if (b.x1 !== undefined && b.y1 !== undefined) {
+                x1 = b.x1 * canvas.width;
+                y1 = b.y1 * canvas.height;
+                x2 = b.x2 * canvas.width;
+                y2 = b.y2 * canvas.height;
+                conf = b.confidence;
+            } 
+            // Handle array format [x1, y1, x2, y2]
+            else {
+                const boxData = b.box || b;
+                if (Array.isArray(boxData) && boxData.length === 4) {
+                    [x1, y1, x2, y2] = boxData;
+                    conf = b.confidence || status.confidence;
+                }
+            }
+
+            if (x1 !== undefined && y1 !== undefined) {
                 ctx.strokeStyle = '#00f2ff';
                 ctx.lineWidth = 6;
                 ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
                 
-                // Outer glow for visibility
                 ctx.strokeStyle = 'rgba(0, 242, 255, 0.3)';
                 ctx.lineWidth = 12;
                 ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
@@ -175,7 +186,7 @@ export default function LiveDetect() {
 
                     <div style={{ minWidth: '300px' }}>
                         {status.drone_detected ? (
-                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '15px 30px', borderRadius: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '15px', border: '2px solid #ef4444', animation: 'pulse 1s infinite' }}>
+                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '15px 30px', borderRadius: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '15px', border: '2px solid #ef4444' }}>
                                 <AlertTriangle /> ALERT: DRONE ({(status.confidence * 100).toFixed(0)}%)
                             </div>
                         ) : (
