@@ -1,12 +1,9 @@
 import axios from 'axios';
 
-// 🚀 CLOUD DEPLOYMENT URL 🚀
-// Once you deploy the backend to Render, replace the http://localhost... URL below
-// with your actual Render URL (e.g., 'https://drone-backend.onrender.com')
-export const API_URL = 'https://rajthespaceman-drone-api.hf.space';
+export const API_BASE_URL = 'https://rajthespaceman-drone-api.hf.space';
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -22,7 +19,7 @@ export const getHistory = async () => {
   return response.data.history;
 };
 
-export const clearHistory = async () => {
+export const deleteHistory = async () => {
   const response = await api.delete('/detect/history');
   return response.data;
 };
@@ -39,7 +36,7 @@ export const uploadImage = async (file: File) => {
 };
 
 export const getWebSocketUrl = () => {
-  const wsBase = API_URL
+  const wsBase = API_BASE_URL
     .replace(/^https:\/\//, 'wss://')
     .replace(/^http:\/\//, 'ws://');
   return `${wsBase}/detect/stream?token=${localStorage.getItem('token') || ''}`;

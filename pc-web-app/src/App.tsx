@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Plane, Upload, LayoutDashboard, LogOut } from 'lucide-react';
+import { Plane, Upload, LayoutDashboard, LogOut, Video } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
 import UploadDetect from './pages/UploadDetect';
+import LiveDetect from './pages/LiveDetect';
 import Auth from './pages/Auth';
 
 const Navbar = ({ onLogout }: { onLogout: () => void }) => {
@@ -11,7 +12,8 @@ const Navbar = ({ onLogout }: { onLogout: () => void }) => {
 
   const navItems = [
     { path: '/', label: 'History', icon: <LayoutDashboard size={18} /> },
-    { path: '/upload', label: 'Upload Image', icon: <Upload size={18} /> }
+    { path: '/upload', label: 'Upload Image', icon: <Upload size={18} /> },
+    { path: '/live', label: 'Live Feed', icon: <Video size={18} /> }
   ];
 
   return (
@@ -32,7 +34,7 @@ const Navbar = ({ onLogout }: { onLogout: () => void }) => {
               {item.label}
             </Link>
           ))}
-          <button onClick={onLogout} className="nav-link text-danger btn-nav-logout flex items-center gap-2">
+          <button onClick={onLogout} className="nav-link text-danger btn-nav-logout" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <LogOut size={18} />
             Logout
           </button>
@@ -69,6 +71,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/upload" element={<UploadDetect />} />
+            <Route path="/live" element={<LiveDetect />} />
           </Routes>
         </main>
       </div>
