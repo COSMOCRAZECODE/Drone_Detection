@@ -17,7 +17,7 @@ export default function LiveDetect() {
 
   const initCamera = () => {
     setShowPrompt(true);
-    setSessionName(`Surveillance_${new Date().toLocaleTimeString([], { hour12: false }).replace(/:/g, '-')}`);
+    setSessionName(`Sector_${new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' }).replace(/:/g, '-')}`);
   };
 
   const startCamera = async () => {
@@ -158,23 +158,23 @@ export default function LiveDetect() {
       {showPrompt && (
         <div className="modal-overlay">
           <div className="modal-card">
-            <h2 className="text-xl font-bold mb-4">Start Detection Session</h2>
-            <p className="text-muted text-sm mb-6">Give this session a name to organize your history.</p>
+            <h2 className="text-xl font-bold mb-4">Initialize Surveillance</h2>
+            <p className="text-muted text-sm mb-6">Enter a session tag to log this feed.</p>
             <div className="input-group">
-                <label className="input-label">Session Name</label>
+                <label className="input-label">Session Tag</label>
                 <input 
                     type="text" 
                     className="input-field" 
                     value={sessionName}
                     onChange={(e) => setSessionName(e.target.value)}
-                    placeholder="e.g. Backyard Scan"
+                    placeholder="e.g. Garden_West"
                     autoFocus
                     onKeyDown={(e) => e.key === 'Enter' && startCamera()}
                 />
             </div>
             <div className="flex gap-4 mt-8">
                 <button onClick={() => setShowPrompt(false)} className="btn btn-secondary flex-1">CANCEL</button>
-                <button onClick={startCamera} className="btn btn-primary flex-1">START FEED</button>
+                <button onClick={startCamera} className="btn btn-primary flex-1">START SYSTEM</button>
             </div>
           </div>
         </div>
@@ -188,15 +188,14 @@ export default function LiveDetect() {
       <div className="card">
         {error && <div className="badge badge-danger mb-4 w-full text-center">{error}</div>}
 
-        <div className="image-preview-container" style={{ height: '500px', border: 'none', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="image-preview-container" style={{ height: '500px', border: 'none', background: '#000', position: 'relative' }}>
           <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'contain' }} muted playsInline />
           <canvas ref={overlayRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 10, pointerEvents: 'none' }} />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {!isStreaming && (
-            <div className="flex flex-col items-center justify-center gap-4 text-muted w-full h-full">
-              <CameraOff size={64} style={{ opacity: 0.15 }} />
-              <p className="font-bold uppercase tracking-widest text-xs opacity-50">Feed Offline</p>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+              <p className="font-bold uppercase tracking-widest text-sm opacity-50 text-muted">FFED OFFLINE</p>
             </div>
           )}
         </div>

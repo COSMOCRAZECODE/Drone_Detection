@@ -35,7 +35,7 @@ export default function Dashboard() {
   }, []);
 
   const handleDeleteAll = async () => {
-    if (window.confirm("Are you sure you want to clear your entire history?")) {
+    if (window.confirm("CRITICAL: Wipe entire detection history? This cannot be undone.")) {
       await deleteHistory();
       fetchHistory();
     }
@@ -43,7 +43,7 @@ export default function Dashboard() {
 
   const handleDeleteSession = async (e: React.MouseEvent, sid: string) => {
     e.stopPropagation();
-    if (window.confirm(`Delete all alerts from session "${sid}"?`)) {
+    if (window.confirm(`Delete entire session "${sid}"?`)) {
       await deleteSession(sid);
       if (selectedSession === sid) setSelectedSession(null);
       fetchHistory();
@@ -52,17 +52,26 @@ export default function Dashboard() {
 
   const handleDeleteRecord = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm("Delete this specific detection record?")) {
+    if (window.confirm("Delete this specific record?")) {
       await deleteRecord(id);
       fetchHistory();
     }
+  };
+
+  const formatDisplayTime = (isoString: string) => {
+    // Force local timezone display
+    return new Date(isoString).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
   };
 
   const handleDownload = (e: React.MouseEvent, base64: string, name: string) => {
     e.stopPropagation();
     const link = document.createElement('a');
     link.href = `data:image/jpeg;base64,${base64}`;
-    link.download = `DroneDet_${name}_${new Date().getTime()}.jpg`;
+    link.download = `DroneDet_${name.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -88,82 +97,92 @@ export default function Dashboard() {
 
   return (
     <div className="main-content">
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex justify-between items-end mb-12">
         <div>
-          <h1 className="text-2xl font-bold">Detection History</h1>
-          <p className="text-muted mt-2">Persistence and logs of all drone activities.</p>
+          <h1 className="text-3xl font-bold">Security Logs</h1>
+          <p className="text-muted mt-2 text-sm italic">Historical record for all drone detection events.</p>
         </div>
-        <button onClick={handleDeleteAll} className="btn" style={{ color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)', padding: '0.6rem 1.2rem', fontSize: '0.875rem' }}>
-          <Trash2 size={16} /> WIPE ALL RECORDS
+        <button 
+          onClick={handleDeleteAll} 
+          className="btn" 
+          style={{ 
+            color: 'var(--danger)', 
+            borderColor: 'rgba(239, 68, 68, 0.2)', 
+            background: 'rgba(239, 68, 68, 0.05)',
+            padding: '0.8rem 1.5rem',
+            fontSize: '0.8rem',
+            fontWeight: 'bold',
+            letterSpacing: '0.05em'
+          }}
+        >
+          <Trash2 size={16} /> WIPE DATABASE
         </button>
       </div>
 
-      <div className="flex gap-8 mb-8" style={{ borderBottom: '1px solid var(--border-color)' }}>
+      <div className="history-tabs">
         <button
           onClick={() => { setActiveTab('uploads'); setSelectedSession(null); }}
           className={`tab-btn ${activeTab === 'uploads' ? 'active' : ''}`}
         >
-          <div className="flex items-center gap-2">
-            <Layers size={18} /> UPLOADS ({uploadHistory.length})
-          </div>
+          <Layers size={18} /> UPLOADS ({uploadHistory.length})
         </button>
         <button
           onClick={() => { setActiveTab('live'); setSelectedSession(null); }}
           className={`tab-btn ${activeTab === 'live' ? 'active' : ''}`}
         >
-          <div className="flex items-center gap-2">
-            <Video size={18} /> LIVE ALERTS ({Object.keys(sessionsMap).length})
-          </div>
+          <Video size={18} /> LIVE SURVEILLANCE ({Object.keys(sessionsMap).length})
         </button>
       </div>
 
       {activeTab === 'uploads' && (
-        <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+        <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '2.5rem' }}>
           {uploadHistory.length === 0 ? (
-            <div className="col-span-full py-24 text-center text-muted card">
-               <ImageIcon size={64} className="mx-auto mb-4 opacity-10" />
-               <p>No uploaded detections found.</p>
+            <div className="col-span-full py-32 text-center text-muted card border-dashed">
+               <ImageIcon size={64} className="mx-auto mb-4 opacity-5" />
+               <p className="font-bold tracking-widest text-xs">NO UPLOADS RECORDED</p>
             </div>
           ) : uploadHistory.map(item => (
-            <div key={item._id} className="card group" style={{ position: 'relative', padding: '1.25rem' }}>
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                <button 
-                  onClick={(e) => item.image_data && handleDownload(e, item.image_data, 'Upload')}
-                  className="btn-icon btn-icon-primary"
-                  title="Download Image"
-                >
-                  <Download size={14} />
-                </button>
-                <button 
-                  onClick={(e) => handleDeleteRecord(e, item._id)}
-                  className="btn-icon btn-icon-danger"
-                  title="Delete Record"
-                >
-                  <Trash2 size={14} />
-                </button>
+            <div key={item._id} className="card group" style={{ position: 'relative', padding: '1.5rem' }}>
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all scale-95 origin-top-right">
+                <div className="btn-icon-group">
+                  <button 
+                    onClick={(e) => item.image_data && handleDownload(e, item.image_data, 'Upload')}
+                    className="btn-icon btn-icon-primary"
+                    title="Download"
+                  >
+                    <Download size={16} />
+                  </button>
+                  <button 
+                    onClick={(e) => handleDeleteRecord(e, item._id)}
+                    className="btn-icon btn-icon-danger"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
               
-              <div className="flex justify-between items-center mb-4 pr-16">
+              <div className="flex justify-between items-center mb-5 pr-20">
                 <span className={`badge ${item.drone_detected ? 'badge-danger' : 'badge-success'}`}>
-                  {item.drone_detected ? 'DRONE FOUND' : 'CLEAR'}
+                  {item.drone_detected ? 'DRONE IDENTIFIED' : 'CLEAR AREA'}
                 </span>
                 <span className="text-xs text-muted font-mono">{new Date(item.timestamp).toLocaleDateString()}</span>
               </div>
-              <div className="history-img-container" style={{ background: '#000', height: '180px', borderRadius: '0.75rem', overflow: 'hidden' }}>
+              <div className="history-img-container" style={{ background: '#005', height: '190px', borderRadius: '1rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
                 {item.image_data ? (
-                  <img src={`data:image/jpeg;base64,${item.image_data}`} className="history-img" style={{ maxHeight: '100%' }} />
+                  <img src={`data:image/jpeg;base64,${item.image_data}`} className="history-img" style={{ maxHeight: '100%', filter: 'contrast(1.1)' }} />
                 ) : (
-                  <ImageIcon size={32} className="text-muted" />
+                  <ImageIcon size={32} className="text-muted opacity-20" />
                 )}
               </div>
-              <div className="mt-4 flex justify-between items-center">
-                <div className="flex items-center gap-2 text-xs text-muted">
-                  <Clock size={12} />
-                  {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <div className="mt-5 flex justify-between items-center">
+                <div className="flex items-center gap-2 text-xs text-muted font-bold">
+                  <Clock size={12} style={{ color: 'var(--primary-color)' }} />
+                  {formatDisplayTime(item.timestamp)}
                 </div>
                 <div className="flex items-center gap-1">
-                    <span className="text-xs font-bold text-muted">CONF:</span>
-                    <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{(item.confidence_score * 100).toFixed(1)}%</span>
+                    <span className="text-[10px] font-black text-muted uppercase tracking-tighter">Confidence:</span>
+                    <span style={{ color: 'var(--primary-color)', fontWeight: '900', fontSize: '1rem' }}>{(item.confidence_score * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </div>
@@ -174,40 +193,38 @@ export default function Dashboard() {
       {activeTab === 'live' && (
         <div className="flex flex-col gap-6">
           {!selectedSession ? (
-            <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+            <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
               {Object.keys(sessionsMap).length === 0 ? (
-                <div className="col-span-full py-24 text-center text-muted card">
-                   <Video size={64} className="mx-auto mb-4 opacity-10" />
-                   <p>No live sessions recorded.</p>
+                <div className="col-span-full py-32 text-center text-muted card border-dashed">
+                   <Video size={64} className="mx-auto mb-4 opacity-5" />
+                   <p className="font-bold tracking-widest text-xs">NO SESSIONS LOGGED</p>
                 </div>
               ) : Object.keys(sessionsMap).sort().reverse().map(sid => (
                 <div 
                   key={sid} 
                   onClick={() => setSelectedSession(sid)}
                   className="card group cursor-pointer hover:border-primary-color/50 transition-all"
-                  style={{ padding: '1.5rem', borderStyle: 'solid' }}
+                  style={{ padding: '2rem' }}
                 >
-                  <div className="flex justify-between items-start">
-                    <div style={{ color: 'var(--primary-color)', padding: '0.75rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '1rem' }}>
-                      <FolderOpen size={30} />
+                  <div className="flex justify-between items-start mb-6">
+                    <div style={{ color: 'var(--primary-color)', padding: '1rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '1.25rem' }}>
+                      <FolderOpen size={32} />
                     </div>
                     <button 
                       onClick={(e) => handleDeleteSession(e, sid)}
-                      className="btn-icon btn-icon-danger"
-                      style={{ opacity: 0 }} /* Only show on group hover */
+                      className="btn-icon btn-icon-danger opacity-0 group-hover:opacity-100"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={18} />
                     </button>
                   </div>
-                  <style>{`.group:hover .btn-icon { opacity: 1 !important; }`}</style>
-                  <div className="mt-4">
-                    <h3 className="text-lg font-bold group-hover:text-primary-color transition-colors truncate">{sid}</h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                       <div className="flex items-center gap-1 text-[11px] text-muted uppercase font-bold tracking-tight">
-                          <Layers size={10} /> {sessionsMap[sid].length} Events
+                  <div>
+                    <h3 className="text-xl font-bold group-hover:text-primary-color transition-colors truncate">{sid}</h3>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3">
+                       <div className="flex items-center gap-1.5 text-[11px] text-muted uppercase font-black tracking-widest">
+                          <Layers size={12} className="text-primary-color" /> {sessionsMap[sid].length} Events
                        </div>
-                       <div className="flex items-center gap-1 text-[11px] text-muted uppercase font-bold tracking-tight">
-                          <Calendar size={10} /> {new Date(sessionsMap[sid][0].timestamp).toLocaleDateString()}
+                       <div className="flex items-center gap-1.5 text-[11px] text-muted uppercase font-black tracking-widest">
+                          <Calendar size={12} className="text-primary-color" /> {new Date(sessionsMap[sid][0].timestamp).toLocaleDateString()}
                        </div>
                     </div>
                   </div>
@@ -216,62 +233,70 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="fade-in">
-              <div className="flex items-center gap-6 mb-10">
+              <div className="flex items-center gap-8 mb-12">
                 <button 
                   onClick={() => setSelectedSession(null)}
                   className="btn-icon btn-icon-primary"
-                  style={{ width: '42px', height: '42px', borderRadius: '50%' }}
+                  style={{ width: '48px', height: '48px', borderRadius: '50%' }}
                 >
-                  <ChevronLeft size={24} />
+                  <ChevronLeft size={28} />
                 </button>
                 <div>
-                  <h2 className="text-xl font-bold flex items-center gap-3">
-                    <FolderOpen size={24} style={{ color: 'var(--primary-color)' }} />
-                    {selectedSession}
+                  <h2 className="text-2xl font-black flex items-center gap-4">
+                    <span style={{ color: 'var(--primary-color)' }}>{selectedSession}</span>
                   </h2>
-                  <p className="text-muted text-xs uppercase font-bold tracking-widest mt-1">
-                    Logged {sessionsMap[selectedSession!].length} high-confidence detections
+                  <p className="text-muted text-[10px] uppercase font-black tracking-[0.2em] mt-2 opacity-60">
+                    DETAILED LOGS • {sessionsMap[selectedSession!].length} HIGH-CONFIDENCE DETECTIONS
                   </p>
                 </div>
                 <button 
                     onClick={(e) => handleDeleteSession(e, selectedSession!)}
                     className="ml-auto btn" 
-                    style={{ color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)', fontSize: '0.8rem' }}
+                    style={{ 
+                        color: 'var(--danger)', 
+                        borderColor: 'rgba(239, 68, 68, 0.3)', 
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        fontSize: '0.75rem',
+                        fontWeight: '900',
+                        padding: '0.6rem 1.2rem'
+                    }}
                 >
-                    DELETE SESSION
+                    PURGE SESSION
                 </button>
               </div>
 
-              <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
+              <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '2rem' }}>
                 {sessionsMap[selectedSession!].map(alert => (
-                  <div key={alert._id} className="card group p-3 hover:border-primary-color/30 transition-all" style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}>
-                    <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90">
-                      <button 
-                        onClick={(e) => alert.image_data && handleDownload(e, alert.image_data, 'Live')}
-                        className="btn-icon btn-icon-primary"
-                      >
-                        <Download size={12} />
-                      </button>
-                      <button 
-                        onClick={(e) => handleDeleteRecord(e, alert._id)}
-                        className="btn-icon btn-icon-danger"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                  <div key={alert._id} className="card group p-4 hover:border-primary-color/40 transition-all" style={{ background: 'rgba(0,0,0,0.3)', position: 'relative', borderRadius: '1.25rem' }}>
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all scale-90">
+                      <div className="btn-icon-group">
+                        <button 
+                          onClick={(e) => alert.image_data && handleDownload(e, alert.image_data, 'Live')}
+                          className="btn-icon btn-icon-primary"
+                        >
+                          <Download size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => handleDeleteRecord(e, alert._id)}
+                          className="btn-icon btn-icon-danger"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="history-img-container" style={{ height: '120px', marginBottom: '0.75rem', border: 'none', background: '#000', borderRadius: '0.5rem' }}>
+                    <div className="history-img-container" style={{ height: '130px', marginBottom: '1rem', border: 'none', background: '#000', borderRadius: '0.75rem' }}>
                       {alert.image_data ? (
                         <img src={`data:image/jpeg;base64,${alert.image_data}`} className="history-img" />
                       ) : (
-                        <div className="flex flex-col items-center gap-1 opacity-20">
-                             <AlertCircle size={24} className="text-danger" />
-                             <span className="text-[10px] font-black text-white">METADATA ONLY</span>
+                        <div className="flex flex-col items-center gap-1 opacity-10">
+                             <AlertCircle size={32} className="text-danger" />
+                             <span className="text-[8px] font-black text-white">METADATA</span>
                         </div>
                       )}
                     </div>
                     <div className="flex justify-between items-center px-1">
                         <span className="text-xs font-black text-primary-color">{(alert.confidence_score * 100).toFixed(0)}% CONF</span>
-                        <span className="text-[10px] text-muted font-mono">{new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-[10px] text-muted font-mono font-bold">{formatDisplayTime(alert.timestamp)}</span>
                     </div>
                   </div>
                 ))}
