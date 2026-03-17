@@ -5,40 +5,14 @@ import { Video, AlertTriangle, ShieldCheck, CameraOff } from 'lucide-react';
 export default function LiveDetect() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const overlayRef = useRef<HTMLCanvasElement>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const timerRef = useRef<any>(null);
 
     const [isStreaming, setIsStreaming] = useState(false);
     const [status, setStatus] = useState<any>({ drone_detected: false, confidence: 0 });
-    const [boxes, setBoxes] = useState<any[]>([]);
     const [error, setError] = useState('');
-    const [videoSize, setVideoSize] = useState({ width: 0, height: 0, left: 0, top: 0 });
-
-    // Function to calculate the exact display coordinates of the video content
-    const updateOverlayBounds = () => {
-        if (!videoRef.current) return;
-        const video = videoRef.current;
-        const container = video.parentElement;
-        if (!container) return;
-
-        const containerRect = container.getBoundingClientRect();
-        const videoRatio = video.videoWidth / video.videoHeight;
-        const containerRatio = containerRect.width / containerRect.height;
-
-        let w, h, l, t;
-        if (videoRatio > containerRatio) {
-            w = containerRect.width;
-            h = containerRect.width / videoRatio;
-            l = 0;
-            t = (containerRect.height - h) / 2;
-        } else {
-            h = containerRect.height;
-            w = containerRect.height * videoRatio;
-            l = (containerRect.width - w) / 2;
-            t = 0;
-        }
-        setVideoSize({ width: w, height: h, left: l, top: t });
-    };
+    const [sessionId, setSessionId] = useState<string | null>(null);
 
     const startCamera = async () => {
         try {
@@ -47,16 +21,16 @@ export default function LiveDetect() {
             });
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
-                videoRef.current.onloadedmetadata = () => {
-                    videoRef.current?.play();
-                    updateOverlayBounds();
-                };
+                videoRef.current.play();
             }
+            
+            const newSessionId = `SESS_${Date.now()}`;
+            setSessionId(newSessionId);
             setIsStreaming(true);
             setError('');
-            connectWebSocket();
+            connectWebSocket(newSessionId);
         } catch (err) {
-            setError('Camera access denied.');
+            setError('Camera access denied. Please check your browser permissions.');
         }
     };
 
@@ -71,25 +45,93 @@ export default function LiveDetect() {
         }
         if (timerRef.current) clearInterval(timerRef.current);
         setIsStreaming(false);
+        setSessionId(null);
         setStatus({ drone_detected: false, confidence: 0 });
-        setBoxes([]);
+        clearOverlay();
     };
 
-    const connectWebSocket = () => {
-        const wsUrl = getWebSocketUrl();
+    const connectWebSocket = (sid: string) => {
+        const wsUrl = getWebSocketUrl(sid);
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            setStatus({ drone_detected: data.drone_detected, confidence: data.confidence });
-            if (data.boxes) setBoxes(data.boxes);
-            else setBoxes([]);
+            try {
+                const data = JSON.parse(e.data);
+                setStatus({ drone_detected: data.drone_detected, confidence: data.confidence });
+                if (data.boxes) {
+                    drawOverlay(data.boxes);
+                } else {
+                    clearOverlay();
+                }
+            } catch (err) { console.error("WS Message Error", err); }
         };
         
         ws.onclose = () => {
-            if (isStreaming) setError('Link lost. Re-initializing...');
+            if (isStreaming) setError('Link lost. Re-establishing connection...');
         };
+    };
+
+    const clearOverlay = () => {
+        if (!overlayRef.current) return;
+        const ctx = overlayRef.current.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
+    };
+
+    const drawOverlay = (boxes: any[]) => {
+        if (!overlayRef.current || !videoRef.current) return;
+        const ctx = overlayRef.current.getContext('2d');
+        if (!ctx) return;
+
+        const video = videoRef.current;
+        if (video.videoWidth === 0) return;
+
+        const canvas = overlayRef.current;
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        boxes.forEach(b => {
+            let x1, y1, x2, y2, conf;
+
+            // Handle Normalized Objects from V5 Backend
+            if (b.x1 !== undefined && b.y1 !== undefined) {
+                x1 = b.x1 * canvas.width;
+                y1 = b.y1 * canvas.height;
+                x2 = b.x2 * canvas.width;
+                y2 = b.y2 * canvas.height;
+                conf = b.confidence;
+            } 
+            // Handle Legacy Arrays
+            else {
+                const boxData = b.box || b;
+                if (Array.isArray(boxData) && boxData.length === 4) {
+                    [x1, y1, x2, y2] = boxData;
+                    conf = b.confidence || status.confidence;
+                }
+            }
+
+            if (x1 !== undefined && y1 !== undefined) {
+                // High contrast neon frame
+                ctx.strokeStyle = '#00f2ff';
+                ctx.lineWidth = 6;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                
+                // Outer glow
+                ctx.strokeStyle = 'rgba(0, 242, 255, 0.4)';
+                ctx.lineWidth = 15;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                // Label
+                ctx.fillStyle = '#00f2ff';
+                ctx.font = '900 24px Arial';
+                const label = `TARGET ${(conf * 100).toFixed(0)}%`;
+                ctx.fillText(label, x1, y1 > 40 ? y1 - 15 : 40);
+            }
+        });
     };
 
     useEffect(() => {
@@ -98,102 +140,68 @@ export default function LiveDetect() {
                 if (videoRef.current && videoRef.current.readyState >= 2 && wsRef.current?.readyState === WebSocket.OPEN) {
                     const canvas = canvasRef.current!;
                     const video = videoRef.current;
+                    
                     if (video.videoWidth > 0) {
-                        canvas.width = Math.min(video.videoWidth, 640);
-                        canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
                         const ctx = canvas.getContext('2d');
                         if (ctx) {
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            const base64 = canvas.toDataURL('image/jpeg', 0.5);
+                            ctx.drawImage(video, 0, 0);
+                            const base64 = canvas.toDataURL('image/jpeg', 0.6);
                             wsRef.current.send(base64);
                         }
                     }
                 }
-            }, 400);
+            }, 300); // 3 FPS for stable streaming
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [isStreaming]);
 
-    useEffect(() => {
-        window.addEventListener('resize', updateOverlayBounds);
-        return () => {
-            window.removeEventListener('resize', updateOverlayBounds);
-            stopCamera();
-        };
-    }, []);
+    useEffect(() => { return () => stopCamera(); }, []);
 
     return (
-        <div className="section-container" style={{ padding: '20px' }}>
-            <div className="section-header" style={{ marginBottom: '20px' }}>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#fff' }}>LIVE SURVEILLANCE</h1>
-                <p style={{ color: '#94a3b8' }}>Real-time AI drone identification and tracking.</p>
+        <div className="section-container" style={{ padding: '40px 20px' }}>
+            <div className="section-header" style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#fff', textTransform: 'uppercase' }}>Live Detection Hub</h1>
+                {sessionId && <p style={{ color: '#6366f1', fontWeight: 'bold' }}>ACTIVE SESSION: {sessionId}</p>}
+                {!sessionId && <p style={{ color: '#94a3b8' }}>Advanced AI drone surveillance (Desktop Optimized)</p>}
             </div>
 
-            <div className="card" style={{ maxWidth: '1000px', margin: '0 auto', background: '#0f172a', border: '1px solid #1e293b', overflow: 'hidden' }}>
-                <div style={{ position: 'relative', width: '100%', background: '#000', borderRadius: '12px', overflow: 'hidden', height: '550px' }}>
-                    
-                    <video 
-                        ref={videoRef} 
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-                        muted 
-                        playsInline 
-                    />
+            <div className="card" style={{ maxWidth: '1100px', margin: '0 auto', background: '#1e293b', padding: '20px', borderRadius: '16px' }}>
+                {error && <div style={{ background: '#ef4444', color: '#fff', padding: '10px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}
 
-                    {/* DYNAMIC PRECISION OVERLAY */}
-                    <div style={{ 
-                        position: 'absolute', 
-                        width: videoSize.width, 
-                        height: videoSize.height, 
-                        left: videoSize.left, 
-                        top: videoSize.top,
-                        pointerEvents: 'none'
-                    }}>
-                        {boxes.map((b, i) => (
-                            <div key={i} style={{
-                                position: 'absolute',
-                                left: `${b.x1 * 100}%`,
-                                top: `${b.y1 * 100}%`,
-                                width: `${(b.x2 - b.x1) * 100}%`,
-                                height: `${(b.y2 - b.y1) * 100}%`,
-                                border: '3px solid #00f2ff',
-                                boxShadow: '0 0 10px #00f2ff, inset 0 0 10px #00f2ff',
-                                zIndex: 20
-                            }}>
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '-25px', left: '-3px',
-                                    background: '#00f2ff', color: '#000',
-                                    fontSize: '12px', fontWeight: '900',
-                                    padding: '2px 8px', whiteSpace: 'nowrap'
-                                }}>
-                                    DRONE {(b.confidence * 100).toFixed(0)}%
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
+                <div className="viewer-frame" style={{ position: 'relative', background: '#000', borderRadius: '12px', border: '2px solid #334155' }}>
+                    <video ref={videoRef} style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }} muted playsInline />
+                    <canvas ref={overlayRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 10, pointerEvents: 'none' }} />
                     <canvas ref={canvasRef} style={{ display: 'none' }} />
+                    
+                    {!isStreaming && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#475569', minHeight: '400px' }}>
+                            <CameraOff size={80} style={{ opacity: 0.2 }} />
+                            <p style={{ marginTop: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>System Offline</p>
+                        </div>
+                    )}
                 </div>
 
-                <div style={{ marginTop: '20px', display: 'flex', gap: '15px', alignItems: 'center', padding: '15px' }}>
+                <div style={{ marginTop: '30px', display: 'flex', gap: '20px', alignItems: 'center', justifyContent: 'center' }}>
                     {!isStreaming ? (
-                        <button onClick={startCamera} className="btn-primary" style={{ padding: '12px 30px', fontWeight: 'bold' }}>
-                            START MONITORING
+                        <button onClick={startCamera} className="btn-primary" style={{ padding: '15px 40px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', background: '#6366f1', color: '#fff', border: 'none' }}>
+                            <Video size={20} style={{ marginRight: '10px' }} /> INITIALIZE FEED
                         </button>
                     ) : (
-                        <button onClick={stopCamera} style={{ padding: '12px 30px', background: '#ef4444', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                            STOP FEED
+                        <button onClick={stopCamera} style={{ padding: '15px 40px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', background: '#ef4444', color: '#fff', border: 'none' }}>
+                            <CameraOff size={20} style={{ marginRight: '10px' }} /> TERMINATE
                         </button>
                     )}
 
-                    <div style={{ marginLeft: 'auto' }}>
+                    <div style={{ minWidth: '300px' }}>
                         {status.drone_detected ? (
-                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <AlertTriangle size={18} /> THREAT DETECTED: {(status.confidence * 100).toFixed(0)}%
+                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '15px 30px', borderRadius: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '15px', border: '2px solid #ef4444' }}>
+                                <AlertTriangle /> ALERT: DRONE ({(status.confidence * 100).toFixed(0)}%)
                             </div>
                         ) : (
-                            <div style={{ color: '#10b981', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ShieldCheck size={18} /> AIRSPACE SECURE
+                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '15px 30px', borderRadius: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '15px', border: '2px solid #10b981' }}>
+                                <ShieldCheck /> AIRSPACE SECURE
                             </div>
                         )}
                     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getHistory, deleteHistory, API_BASE_URL } from '../api';
-import { AlertTriangle, CheckCircle2, Clock, Image as ImageIcon, Video, Trash2, Folder, ExternalLink } from 'lucide-react';
+import { getHistory, deleteHistory, deleteSession, API_BASE_URL } from '../api';
+import { AlertCircle, CheckCircle2, Clock, Image as ImageIcon, Video, Trash2, FolderOpen, Layers } from 'lucide-react';
 
 interface HistoryItem {
     _id: string;
@@ -9,13 +9,14 @@ interface HistoryItem {
     drone_detected: boolean;
     confidence_score: number;
     filename?: string;
+    image_data?: string;
     session_id?: string;
 }
 
 export default function Dashboard() {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'sessions' | 'uploads'>('sessions');
+    const [activeTab, setActiveTab] = useState<'uploads' | 'live'>('uploads');
 
     const fetchHistory = async () => {
         try {
@@ -32,149 +33,137 @@ export default function Dashboard() {
         fetchHistory();
     }, []);
 
-    const handleDelete = async (id: string) => {
-        // Since the backend only has delete_history for ALL, I'll need to keep that for now 
-        // OR if I had an endpoint for single delete. 
-        // For now, I'll warn the user it clears ALL if they use the main button.
-    };
-
-    const clearAll = async () => {
-        if (window.confirm("CRITICAL: This will wipe all recorded data. Continue?")) {
+    const handleDeleteAll = async () => {
+        if (window.confirm("Are you sure you want to clear your entire history?")) {
             await deleteHistory();
-            setHistory([]);
+            fetchHistory();
         }
     };
 
-    // Grouping live detections by session_id
-    const sessionsMap: Record<string, HistoryItem[]> = {};
-    const uploads: HistoryItem[] = [];
-
-    history.forEach(item => {
-        if (item.type === 'image') {
-            uploads.push(item);
-        } else if (item.session_id) {
-            if (!sessionsMap[item.session_id]) sessionsMap[item.session_id] = [];
-            sessionsMap[item.session_id].push(item);
+    const handleDeleteSession = async (sid: string) => {
+        if (window.confirm(`Delete all alerts from session ${sid}?`)) {
+            await deleteSession(sid);
+            fetchHistory();
         }
+    };
+
+    const uploadHistory = history.filter(h => h.type === 'image');
+    
+    // Group live video by session
+    const liveHistory = history.filter(h => h.type === 'live_video');
+    const sessionsMap: { [key: string]: HistoryItem[] } = {};
+    liveHistory.forEach(item => {
+        const sid = item.session_id || 'Legacy Streams';
+        if (!sessionsMap[sid]) sessionsMap[sid] = [];
+        sessionsMap[sid].push(item);
     });
 
-    const sortedSessions = Object.keys(sessionsMap).sort((a, b) => b.localeCompare(a));
-
-    if (loading) return <div className="text-center p-20 text-muted">Synchronizing secure logs...</div>;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center p-20">
+                <div className="spinner"><Clock size={40} className="text-primary-color" /></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="fade-in">
-            <div className="flex justify-between items-center mb-8">
+        <div className="max-w-6xl mx-auto p-4">
+            <div className="flex justify-between items-center mb-10">
                 <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter">Forensic Logs</h1>
-                    <p className="text-muted text-sm">Review evidence and surveillance sessions.</p>
+                    <h1 className="text-3xl font-black uppercase tracking-tighter">Security Logs</h1>
+                    <p className="text-muted">Persistence of all detected drone activities.</p>
                 </div>
-                <button onClick={clearAll} className="btn-secondary text-xs flex items-center gap-2" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', color: '#ef4444' }}>
-                    <Trash2 size={14} /> PURGE DATABASE
+                <button onClick={handleDeleteAll} className="btn-secondary" style={{ color: '#ef4444' }}>
+                    <Trash2 size={16} /> WIPE ALL RECORDS
                 </button>
             </div>
 
             {/* TAB SELECTOR */}
-            <div className="flex gap-4 mb-6 border-b border-white/5 pb-2">
-                <button 
-                    onClick={() => setActiveTab('sessions')}
-                    className={`pb-2 px-4 font-bold text-sm uppercase tracking-widest transition-all ${activeTab === 'sessions' ? 'text-primary-color border-b-2 border-primary-color' : 'text-muted'}`}
-                >
-                    Live Sessions
-                </button>
+            <div className="flex gap-4 mb-8 border-b border-white/5 pb-4">
                 <button 
                     onClick={() => setActiveTab('uploads')}
-                    className={`pb-2 px-4 font-bold text-sm uppercase tracking-widest transition-all ${activeTab === 'uploads' ? 'text-primary-color border-b-2 border-primary-color' : 'text-muted'}`}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold transition-all ${activeTab === 'uploads' ? 'bg-white/5 text-white border-b-2 border-primary-color' : 'text-muted hover:text-white'}`}
                 >
-                    Manual Scans
+                    <Layers size={18} /> IMAGE UPLOADS ({uploadHistory.length})
+                </button>
+                <button 
+                    onClick={() => setActiveTab('live')}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold transition-all ${activeTab === 'live' ? 'bg-white/5 text-white border-b-2 border-primary-color' : 'text-muted hover:text-white'}`}
+                >
+                    <Video size={18} /> LIVE ALERT SESSIONS ({Object.keys(sessionsMap).length})
                 </button>
             </div>
 
-            {activeTab === 'sessions' ? (
-                <div className="flex flex-col gap-4">
-                    {sortedSessions.length === 0 ? (
-                        <div className="card text-center p-12 text-muted">No surveillance sessions recorded.</div>
-                    ) : (
-                        sortedSessions.map(sid => {
-                            const sessionAlerts = sessionsMap[sid];
-                            const startTime = new Date(sessionAlerts[sessionAlerts.length-1].timestamp).toLocaleString();
-                            const droneAlerts = sessionAlerts.filter(a => a.drone_detected);
-                            const topConf = Math.max(...sessionAlerts.map(a => a.confidence_score));
-                            const hasImages = sessionAlerts.some(a => a.filename);
+            {/* TAB CONTENT: UPLOADS */}
+            {activeTab === 'uploads' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {uploadHistory.length === 0 ? (
+                        <p className="text-muted col-span-3 text-center py-20 italic">No image uploads recorded.</p>
+                    ) : uploadHistory.map(item => (
+                        <div key={item._id} className="card p-4">
+                            <div className="flex justify-between items-start mb-4">
+                                <span className={`badge ${item.drone_detected ? 'badge-danger' : 'badge-success'}`}>
+                                    {item.drone_detected ? 'DRONE FOUND' : 'CLEAR'}
+                                </span>
+                                <div className="text-[10px] text-muted font-mono">{new Date(item.timestamp).toLocaleString()}</div>
+                            </div>
+                            <div className="aspect-video bg-black rounded-lg overflow-hidden border border-white/5 mb-4">
+                                {item.image_data ? (
+                                    <img src={`data:image/jpeg;base64,${item.image_data}`} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-muted text-xs">No Persistent Image</div>
+                                )}
+                            </div>
+                            <div className="flex justify-between items-center text-xs font-bold uppercase">
+                                <span className="text-muted">Confidence</span>
+                                <span className="text-primary-color">{(item.confidence_score * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
-                            return (
-                                <div key={sid} className="card p-0 overflow-hidden border-white/5 hover:border-white/10 transition-all">
-                                    <div className="p-4 bg-white/5 flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <Folder className="text-primary-color" size={20} />
-                                            <div>
-                                                <h3 className="font-bold text-sm uppercase">Session: {sid.split('_')[1]}</h3>
-                                                <p className="text-[10px] text-muted">{startTime}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <div className="badge bg-emerald-500/10 text-emerald-500">{sessionAlerts.length} Frames</div>
-                                            {droneAlerts.length > 0 && <div className="badge bg-red-500/10 text-red-500">{droneAlerts.length} Alerts</div>}
-                                        </div>
+            {/* TAB CONTENT: LIVE SESSIONS */}
+            {activeTab === 'live' && (
+                <div className="flex flex-col gap-8">
+                    {Object.keys(sessionsMap).length === 0 ? (
+                        <p className="text-muted text-center py-20 italic">No live detections recorded.</p>
+                    ) : Object.keys(sessionsMap).sort().reverse().map(sid => (
+                        <div key={sid} className="bg-white/5 rounded-2xl p-6 border border-white/5">
+                            <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-primary-color/20 rounded-xl text-primary-color"><FolderOpen size={24} /></div>
+                                    <div>
+                                        <h3 className="font-black text-xl text-white uppercase tracking-tighter">{sid}</h3>
+                                        <p className="text-[10px] text-muted font-mono uppercase">
+                                            {sessionsMap[sid].length} Alerts Logged • Last Activity: {new Date(sessionsMap[sid][0].timestamp).toLocaleTimeString()}
+                                        </p>
                                     </div>
-                                    
-                                    <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        {/* Show top 4 captures from this session */}
-                                        {sessionAlerts.filter(a => a.filename).slice(0, 4).map(alert => (
-                                            <div key={alert._id} className="relative aspect-video rounded bg-black/40 overflow-hidden group">
-                                                <img 
-                                                    src={`${API_BASE_URL}/uploads/${alert.filename}`} 
-                                                    className="w-full h-full object-cover" 
-                                                    alt="Alert"
-                                                />
-                                                <div className="absolute inset-0 bg-red-600/20 mix-blend-overlay"></div>
-                                                <div className="absolute bottom-1 right-1 bg-black/80 text-[8px] px-1 rounded text-white font-mono">
-                                                    {(alert.confidence_score * 100).toFixed(0)}%
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {sessionAlerts.filter(a => a.filename).length === 0 && (
-                                            <div className="col-span-4 text-center py-4 text-[10px] text-muted uppercase tracking-widest">
-                                                No high-confidence captures – Airspace predominantly clear.
+                                </div>
+                                <button onClick={() => handleDeleteSession(sid)} className="p-3 hover:bg-red-500/20 text-muted hover:text-red-500 rounded-xl transition-all">
+                                    <Trash2 size={20} />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                {sessionsMap[sid].map(alert => (
+                                    <div key={alert._id} className="group relative aspect-square bg-black rounded-xl overflow-hidden border border-white/10 hover:border-primary-color/50 transition-all cursor-crosshair">
+                                        {alert.image_data ? (
+                                            <img src={`data:image/jpeg;base64,${alert.image_data}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-100" />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+                                                <AlertCircle size={24} className="text-danger mb-1" />
+                                                <span className="text-[8px] font-bold text-muted uppercase">Metadata Only</span>
                                             </div>
                                         )}
+                                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black text-[10px] font-bold">
+                                            {(alert.confidence_score * 100).toFixed(0)}% • {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {uploads.length === 0 ? (
-                        <div className="col-span-3 card text-center p-12 text-muted">No manual scans found.</div>
-                    ) : (
-                        uploads.map(item => (
-                            <div key={item._id} className="card p-4">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-2 text-[10px] text-muted font-mono uppercase">
-                                        <Clock size={12} /> {new Date(item.timestamp).toLocaleString()}
-                                    </div>
-                                    <span className={`badge ${item.drone_detected ? 'badge-danger' : 'badge-success'}`}>
-                                        {item.drone_detected ? 'POSITIVE' : 'NEGATIVE'}
-                                    </span>
-                                </div>
-                                
-                                <div className="aspect-square rounded-xl bg-black/40 mb-4 overflow-hidden border border-white/5">
-                                    <img 
-                                        src={`${API_BASE_URL}/uploads/${item.filename}`}
-                                        className="w-full h-full object-contain"
-                                        alt="Scan result"
-                                    />
-                                </div>
-
-                                <div className="flex justify-between items-center text-xs font-bold text-muted uppercase">
-                                    <span>Confidence</span>
-                                    <span className="text-white">{(item.confidence_score * 100).toFixed(1)}%</span>
-                                </div>
+                                ))}
                             </div>
-                        ))
-                    )}
+                        </div>
+                    ))}
                 </div>
             )}
         </div>

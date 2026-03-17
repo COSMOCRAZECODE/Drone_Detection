@@ -24,6 +24,11 @@ export const deleteHistory = async () => {
   return response.data;
 };
 
+export const deleteSession = async (sessionId: string) => {
+  const response = await api.delete(`/detect/session/${sessionId}`);
+  return response.data;
+};
+
 export const uploadImage = async (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -35,11 +40,12 @@ export const uploadImage = async (file: File) => {
   return response.data;
 };
 
-export const getWebSocketUrl = () => {
+export const getWebSocketUrl = (sessionId?: string) => {
   const wsBase = API_BASE_URL
     .replace(/^https:\/\//, 'wss://')
     .replace(/^http:\/\//, 'ws://');
-  return `${wsBase}/detect/stream?token=${localStorage.getItem('token') || ''}`;
+  const sid = sessionId || `session_${Date.now()}`;
+  return `${wsBase}/detect/stream?token=${localStorage.getItem('token') || ''}&session_id=${sid}`;
 };
 
 export default api;
